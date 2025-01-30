@@ -1,8 +1,13 @@
+use crate::db::repo::pins::create_pin;
+use crate::services::db_service::DbService;
 use crate::services::pin_service::{GetPinsParams, PinServiceTrait};
 use crate::structs::{Pin, PinResults, PinStatus};
 use async_trait::async_trait;
+use std::sync::Arc;
 
-pub struct WvmPinService;
+pub struct WvmPinService {
+    pub(crate) db_service: Arc<DbService>,
+}
 
 #[async_trait]
 impl PinServiceTrait for WvmPinService {
@@ -12,7 +17,8 @@ impl PinServiceTrait for WvmPinService {
     }
 
     async fn add_pin(&self, pin: Pin) -> actix_web::Result<PinStatus> {
-        println!("add_pin");
+        let mut conn = self.db_service.db_pool.get().unwrap();
+        create_pin(&mut conn, &pin.cid, 0);
         todo!()
     }
 
