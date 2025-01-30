@@ -61,6 +61,12 @@ pub enum Status {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PinMeta(pub HashMap<String, String>);
 
+impl Default for PinMeta {
+    fn default() -> Self {
+        PinMeta(HashMap::new())
+    }
+}
+
 /// Optional info for PinStatus response
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusInfo(pub HashMap<String, String>);

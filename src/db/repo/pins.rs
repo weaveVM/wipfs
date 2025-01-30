@@ -10,9 +10,13 @@ pub struct NewFile<'a> {
     pub size: i64,
 }
 
-pub fn create_pin(conn: &mut PgConnection, cid: &str, size: i64) {
+pub fn create_pin(
+    conn: &mut PgConnection,
+    cid: &str,
+    size: i64,
+) -> Result<usize, diesel::result::Error> {
     use crate::db::repo::pins::files::dsl::files;
     let row = NewFile { cid, size };
 
-    let _ = diesel::insert_into(files).values(&row).execute(conn);
+    diesel::insert_into(files).values(&row).execute(conn)
 }
