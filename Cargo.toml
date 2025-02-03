@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.3.1"
-shuttle-actix-web = "0.51.0"
-shuttle-runtime = "0.51.0"
+shuttle-actix-web = "0.50.0"
+shuttle-runtime = "0.50.0"
 tokio = "1.26.0"
 chrono = "0.4.39"
 serde = { version = "1.0.217", features = ["derive"] }
@@ -16,3 +16,5 @@ diesel = { version = "2.2.6", features = ["postgres", "r2d2", "chrono"] }
 r2d2 = "0.8.10"
 cloud-storage = "0.11.1"
 ureq = "3.0.3"
+bundler = { git = "https://github.com/weaveVM/bundler", branch = "main" }
+uuid = "1.12.1"

@@ -3,14 +3,18 @@ use crate::internal_vars::IPFS_HOST;
 use crate::services::db_service::DbService;
 use crate::services::pin_service::{GetPinsParams, PinServiceTrait};
 use crate::services::storage_service::StorageService;
-use crate::structs::{Pin, PinMeta, PinResults, PinStatus};
+use crate::services::wvm_bundler_service::WvmBundlerService;
+use crate::structs::{Pin, PinMeta, PinResults, PinStatus, Status, StatusInfo};
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct WvmPinService {
     pub(crate) db_service: Arc<DbService>,
     pub(crate) storage_service: Arc<StorageService>,
+    pub(crate) wvm_bundler_service: Arc<WvmBundlerService>,
 }
 
 impl WvmPinService {
@@ -28,6 +32,12 @@ impl WvmPinService {
 
         Some(bytes)
     }
+
+    fn get_new_status_info(&self, bundlr_tx: String) -> StatusInfo {
+        let mut map = HashMap::new();
+        map.insert("Arweave-Tx".to_string(), bundlr_tx);
+        StatusInfo(map)
+    }
 }
 
 #[async_trait]
@@ -40,9 +50,10 @@ impl PinServiceTrait for WvmPinService {
     async fn add_pin(&self, pin: Pin) -> actix_web::Result<PinStatus> {
         let mut conn = self.db_service.db_pool.get().unwrap();
         let insert_pin_data = create_pin(&mut conn, &pin.cid, 0);
+        let req_id = Uuid::new_v4().to_string();
 
         if let Ok(_) = insert_pin_data {
-            let metadata = pin.meta.unwrap_or_else(|| PinMeta::default());
+            let metadata = pin.meta.clone().unwrap_or_else(|| PinMeta::default());
 
             let content_type = metadata
                 .0
@@ -54,15 +65,36 @@ impl PinServiceTrait for WvmPinService {
             if let Some(bytes) = file {
                 let upload_to_bucket = self
                     .storage_service
-                    .upload(bytes, &pin.cid, &content_type)
+                    .upload(bytes.clone(), &pin.cid, &content_type)
                     .await;
                 if upload_to_bucket.is_ok() {
-                    // Send to bundler
+                    let send = self
+                        .wvm_bundler_service
+                        .send(pin.cid.clone(), pin.name.clone(), content_type, bytes)
+                        .await;
+
+                    if let Ok(bundler_tx_id) = send {
+                        return Ok(PinStatus {
+                            request_id: req_id,
+                            status: Status::Pinned,
+                            created: Default::default(),
+                            pin,
+                            delegates: vec![],
+                            info: Some(self.get_new_status_info(bundler_tx_id)),
+                        });
+                    }
                 }
             }
         }
 
-        todo!()
+        Ok(PinStatus {
+            request_id: req_id,
+            status: Status::Failed,
+            created: Default::default(),
+            pin,
+            delegates: vec![],
+            info: None,
+        })
     }
 
     async fn get_pin_by_request_id(&self, request_id: &str) -> actix_web::Result<PinStatus> {

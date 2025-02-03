@@ -31,7 +31,7 @@ pub struct PinStatus {
 }
 
 /// Pin object
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Pin {
     /// Content Identifier (CID) to be pinned recursively
     pub cid: String,
@@ -58,7 +58,7 @@ pub enum Status {
 }
 
 /// Optional metadata for pin object
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PinMeta(pub HashMap<String, String>);
 
 impl Default for PinMeta {

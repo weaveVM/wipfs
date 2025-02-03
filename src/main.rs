@@ -14,6 +14,7 @@ use crate::services::r#impl::wvm_pin::WvmPinService;
 use crate::services::storage_service;
 use crate::services::storage_service::StorageService;
 use crate::services::wipfs_services::WipfsServices;
+use crate::services::wvm_bundler_service::WvmBundlerService;
 use actix_web::web::Data;
 use actix_web::{get, web::ServiceConfig};
 use std::sync::Arc;
@@ -34,12 +35,23 @@ async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsService
         Arc::new(StorageService::new(bucket_name).await)
     };
 
+    let bundler_service = {
+        let priv_key = secrets.get("BUNDLER_PRIV_KEY").unwrap();
+        Arc::new(WvmBundlerService::new(priv_key))
+    };
+
     let pin_service: Arc<dyn PinServiceTrait> = Arc::new(WvmPinService {
         db_service: db_service.clone(),
         storage_service: storage_service.clone(),
+        wvm_bundler_service: bundler_service.clone(),
     });
 
-    Arc::new(WipfsServices::new(pin_service, db_service, storage_service))
+    Arc::new(WipfsServices::new(
+        pin_service,
+        db_service,
+        storage_service,
+        bundler_service,
+    ))
 }
 
 #[shuttle_runtime::main]
