@@ -47,8 +47,11 @@ impl WvmPinService {
 #[async_trait]
 impl PinServiceTrait for WvmPinService {
     async fn get_pins(&self, filters: &GetPinsParams) -> actix_web::Result<PinResults> {
-        let mut conn = self.db_service.db_pool.get().unwrap();
-        let pins = find_pins(&mut conn, &filters).map_err(|e| ErrorInternalServerError(e))?;
+        let pool = self.db_service.db_pool.clone();
+        let mut conn = pool.get().await.unwrap();
+        let pins = find_pins(&mut conn, &filters)
+            .await
+            .map_err(|e| ErrorInternalServerError(e))?;
         Ok(PinResults {
             count: pins.len() as i32,
             results: pins
@@ -71,7 +74,8 @@ impl PinServiceTrait for WvmPinService {
     }
 
     async fn add_pin(&self, pin: Pin) -> actix_web::Result<PinStatus> {
-        let mut conn = self.db_service.db_pool.get().unwrap();
+        let pool = self.db_service.db_pool.clone();
+        let mut conn = pool.get().await.unwrap();
         let req_id = Uuid::new_v4().to_string();
 
         if let Some(bytes) = self.fetch_ipfs_file(&pin.cid) {
@@ -109,7 +113,8 @@ impl PinServiceTrait for WvmPinService {
                                 &envelope_hash,
                                 pin.name.clone(),
                                 &req_id,
-                            );
+                            )
+                            .await;
 
                             if insert_pin_data.is_ok() {
                                 return Ok(PinStatus {
@@ -140,8 +145,9 @@ impl PinServiceTrait for WvmPinService {
     }
 
     async fn get_pin_by_request_id(&self, request_id: &str) -> actix_web::Result<PinStatus> {
-        let mut conn = self.db_service.db_pool.get().unwrap();
-        let find = find_pin(&mut conn, request_id.to_string());
+        let pool = self.db_service.db_pool.clone();
+        let mut conn = pool.get().await.unwrap();
+        let find = find_pin(&mut conn, request_id.to_string()).await;
         if let Ok(Some(file)) = find {
             Ok(PinStatus {
                 request_id: file.req_id,

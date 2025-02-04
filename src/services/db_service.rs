@@ -1,17 +1,23 @@
-use diesel::r2d2::ConnectionManager;
-use diesel::PgConnection;
-use r2d2::Pool;
+use diesel_async::pooled_connection::bb8::PooledConnection;
+use diesel_async::pooled_connection::{bb8::Pool, AsyncDieselConnectionManager};
+use diesel_async::RunQueryDsl;
+use std::sync::Arc;
+
+use diesel_async::pg::AsyncPgConnection;
+
+pub type PgConnection<'a> = PooledConnection<'a, AsyncPgConnection>;
 
 pub struct DbService {
-    pub db_pool: Pool<ConnectionManager<PgConnection>>,
+    pub db_pool: Arc<Pool<AsyncPgConnection>>,
 }
 
 impl DbService {
-    pub fn new(db_url: String) -> Self {
-        let manager = ConnectionManager::<PgConnection>::new(db_url);
+    pub async fn new(db_url: String) -> Self {
+        let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(db_url);
+        let pool = Pool::builder().build(config).await.unwrap();
 
-        let db_pool = Pool::builder().build(manager).unwrap();
-
-        Self { db_pool }
+        Self {
+            db_pool: Arc::new(pool),
+        }
     }
 }

@@ -1,9 +1,12 @@
 use crate::db::schema::files;
+use crate::services::db_service::PgConnection;
 use crate::services::pin_service::GetPinsParams;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::{Insertable, PgConnection, Queryable};
+use diesel::{Insertable, Queryable};
+use diesel_async::AsyncPgConnection;
 // Ensure this is imported
+use diesel_async::RunQueryDsl;
 
 #[derive(Insertable, Queryable)]
 #[diesel(table_name = files)]
@@ -16,8 +19,8 @@ pub struct NewFile<'a> {
     pub req_id: &'a str,
 }
 
-pub fn create_pin(
-    conn: &mut PgConnection,
+pub async fn create_pin<'a>(
+    conn: &mut PgConnection<'a>,
     cid: &str,
     size: usize,
     bundle_tx_id: &str,
@@ -35,7 +38,7 @@ pub fn create_pin(
         req_id,
     };
 
-    diesel::insert_into(files).values(&row).execute(conn)
+    diesel::insert_into(files).values(&row).execute(conn).await
 }
 
 #[derive(Queryable, Selectable, Debug)]
@@ -51,8 +54,8 @@ pub struct IpfsFile {
     pub req_id: String,
 }
 
-pub fn find_pins(
-    conn: &mut PgConnection,
+pub async fn find_pins<'a>(
+    conn: &mut PgConnection<'a>,
     params: &GetPinsParams,
 ) -> Result<Vec<IpfsFile>, diesel::result::Error> {
     use crate::db::repo::pins::files::dsl::*;
@@ -79,13 +82,13 @@ pub fn find_pins(
         query = query.limit(limit.clone() as i64)
     }
 
-    let results = query.load::<IpfsFile>(conn)?; // Execute query
+    let results = query.load::<IpfsFile>(conn).await?; // Execute query
 
     Ok(results)
 }
 
-pub fn find_pin(
-    conn: &mut PgConnection,
+pub async fn find_pin<'a>(
+    conn: &mut PgConnection<'a>,
     q_cid: String,
 ) -> Result<Option<IpfsFile>, diesel::result::Error> {
     use crate::db::repo::pins::files::dsl::*;
@@ -94,6 +97,7 @@ pub fn find_pin(
         .filter(cid.eq(q_cid.clone()))
         .or_filter(req_id.eq(q_cid))
         .first::<IpfsFile>(conn)
+        .await
     {
         Ok(record) => Ok(Some(record)),
         Err(diesel::result::Error::NotFound) => Ok(None),

@@ -26,7 +26,7 @@ async fn hello_world() -> &'static str {
 }
 
 async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsServices> {
-    let db_service: Arc<DbService> = Arc::new(DbService::new(secrets.get("PG_URL").unwrap()));
+    let db_service: Arc<DbService> = Arc::new(DbService::new(secrets.get("PG_URL").unwrap()).await);
 
     let storage_service = {
         let bucket_name = secrets.get("BUCKET_NAME").unwrap();
