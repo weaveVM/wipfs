@@ -13,8 +13,8 @@ serde = { version = "1.0.217", features = ["derive"] }
 async-trait = "0.1.85"
 num_cpus = "1.16.0"
 shuttle-shared-db = { version = "0.52.0", features = ["diesel-async-bb8", "postgres"] }
-diesel = { version = "2", features = ["postgres", "chrono"] }
-diesel-async = { version = "0.4.1", features = ["deadpool", "postgres"] }
+diesel = { version = "2", features = ["chrono"] }
+diesel-async = { version = "0.4.1", features = ["deadpool"] }
 cloud-storage = "0.11.1"
 ureq = "3.0.3"
 bundler = { git = "https://github.com/weaveVM/bundler", branch = "main" }
