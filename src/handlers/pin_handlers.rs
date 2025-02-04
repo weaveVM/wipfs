@@ -1,11 +1,12 @@
 use crate::services::pin_service::{GetPinsParams, PinServiceTrait};
 use crate::services::wipfs_services::WipfsServices;
 use crate::structs::{Pin, PinResults, PinStatus};
+use crate::utils::parse_query_string;
 use actix_web::web::{Path, ServiceConfig};
 use actix_web::{
     delete, get, post,
     web::{Data, Json, Query},
-    HttpResponse, Result,
+    HttpRequest, HttpResponse, Result,
 };
 use std::sync::Arc;
 // Handler functions
@@ -13,17 +14,16 @@ use std::sync::Arc;
 #[get("/pins")]
 pub async fn get_pins(
     service: Data<Arc<WipfsServices>>,
-    params: Query<GetPinsParams>,
+    req: HttpRequest,
 ) -> Result<Json<PinResults>> {
-    println!("Pins called");
-    let result = service.pin_service.get_pins(&params.into_inner()).await?;
+    let params = parse_query_string(req.query_string());
+    let result = service.pin_service.get_pins(&params).await?;
     Ok(Json(result))
 }
 
 #[post("/pins")]
 pub async fn add_pin(service: Data<Arc<WipfsServices>>, pin: Json<Pin>) -> Result<HttpResponse> {
     let pin = pin.into_inner();
-    println!("{:?}", pin);
     let result = service.pin_service.add_pin(pin).await?;
     Ok(HttpResponse::Accepted().json(result))
 }

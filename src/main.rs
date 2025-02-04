@@ -5,6 +5,7 @@ mod internal_vars;
 mod middleware;
 mod services;
 mod structs;
+mod utils;
 
 use crate::actix_web_service::CustomShuttleActixWeb;
 use crate::handlers::pin_handlers::configure_app;

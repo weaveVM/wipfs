@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
+use enum_as_inner::EnumAsInner;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::str::FromStr;
 
 /// Response used for listing pin objects matching request
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,7 +46,7 @@ pub struct Pin {
 }
 
 /// Status a pin object can have at a pinning service
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, EnumAsInner)]
 #[serde(rename_all = "lowercase")]
 pub enum Status {
     /// Pinning operation is waiting in the queue
@@ -55,6 +57,20 @@ pub enum Status {
     Pinned,
     /// Pinning service was unable to finish pinning operation
     Failed,
+}
+
+impl FromStr for Status {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "queued" => Ok(Status::Queued),
+            "pinning" => Ok(Status::Pinning),
+            "pinned" => Ok(Status::Pinned),
+            "failed" => Ok(Status::Failed),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Optional metadata for pin object
@@ -72,7 +88,7 @@ impl Default for PinMeta {
 pub struct StatusInfo(pub HashMap<String, String>);
 
 /// Alternative text matching strategy
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, EnumAsInner)]
 #[serde(rename_all = "lowercase")]
 pub enum TextMatchingStrategy {
     /// Full match, case-sensitive (the implicit default)
@@ -83,6 +99,20 @@ pub enum TextMatchingStrategy {
     Partial,
     /// Partial match, case-insensitive
     Ipartial,
+}
+
+impl FromStr for TextMatchingStrategy {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "exact" => Ok(TextMatchingStrategy::Exact),
+            "iexact" => Ok(TextMatchingStrategy::Iexact),
+            "partial" => Ok(TextMatchingStrategy::Partial),
+            "ipartial" => Ok(TextMatchingStrategy::Ipartial),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Response for a failed request

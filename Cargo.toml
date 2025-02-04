@@ -18,3 +18,5 @@ cloud-storage = "0.11.1"
 ureq = "3.0.3"
 bundler = { git = "https://github.com/weaveVM/bundler", branch = "main" }
 uuid = "1.12.1"
+form_urlencoded = "1.2.1"
+enum-as-inner = "0.6.1"

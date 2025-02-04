@@ -1921,6 +1921,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum-as-inner"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1e6a265c649f3f5979b601d26f1d05ada116434c87741c9493cb56218f76cbc"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.96",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5527,6 +5539,8 @@ dependencies = [
  "chrono",
  "cloud-storage",
  "diesel",
+ "enum-as-inner",
+ "form_urlencoded",
  "num_cpus",
  "r2d2",
  "serde",
