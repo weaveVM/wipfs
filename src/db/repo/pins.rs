@@ -1,15 +1,12 @@
-use crate::db::schema::files;
-use crate::services::db_service::PgConnection;
+use crate::db::schema::FileRecord;
+use crate::db::DATE_FORMAT_MYSQL;
 use crate::services::pin_service::GetPinsParams;
-use chrono::NaiveDateTime;
-use diesel::prelude::*;
-use diesel::{Insertable, Queryable};
-use diesel_async::AsyncPgConnection;
-// Ensure this is imported
-use diesel_async::RunQueryDsl;
+use anyhow::Error;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use planetscale_driver::{query, PSConnection};
+use serde::{Deserialize, Serialize};
 
-#[derive(Insertable, Queryable)]
-#[diesel(table_name = files)]
+#[derive(Serialize, Deserialize)]
 pub struct NewFile<'a> {
     pub cid: &'a str,
     pub size: i64,
@@ -19,88 +16,72 @@ pub struct NewFile<'a> {
     pub req_id: &'a str,
 }
 
-pub async fn create_pin<'a>(
-    conn: &mut PgConnection<'a>,
+pub async fn create_pin(
+    conn: PSConnection,
     cid: &str,
     size: usize,
     bundle_tx_id: &str,
     envelope_id: &str,
     name: Option<String>,
     req_id: &str,
-) -> Result<usize, diesel::result::Error> {
-    use crate::db::repo::pins::files::dsl::files;
-    let row = NewFile {
-        cid,
-        size: size as i64,
-        bundle_tx_id,
-        envelope_id,
-        name,
-        req_id,
-    };
+) -> anyhow::Result<()> {
+    let now: DateTime<Utc> = Utc::now();
+    let formatted_created_at = now.format(DATE_FORMAT_MYSQL).to_string();
 
-    diesel::insert_into(files).values(&row).execute(conn).await
+    let query_str = format!(
+        "INSERT INTO files(cid, size, bundle_tx_id, envelope_id, name, req_id) VALUES('{}', {}, '{}', '{}', '{}', '{}')",
+        cid, size as i64, bundle_tx_id, envelope_id, name.unwrap_or_default(), req_id
+    );
+
+    query(&query_str).execute(&conn).await
 }
 
-#[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = files)]
-pub struct IpfsFile {
-    pub id: i64,
-    pub created_at: NaiveDateTime,
-    pub cid: String,
-    pub size: i64,
-    pub bundle_tx_id: String,
-    pub envelope_id: String,
-    pub name: Option<String>,
-    pub req_id: String,
-}
-
-pub async fn find_pins<'a>(
-    conn: &mut PgConnection<'a>,
+pub async fn find_pins(
+    conn: PSConnection,
     params: &GetPinsParams,
-) -> Result<Vec<IpfsFile>, diesel::result::Error> {
-    use crate::db::repo::pins::files::dsl::*;
+) -> Result<Vec<FileRecord>, anyhow::Error> {
+    // Start with a base query string. "WHERE 1=1" is a trick to simplify appending "AND" clauses.
+    let mut query_str = String::from("SELECT * FROM files WHERE 1=1");
 
-    let mut query = files.into_boxed::<diesel::pg::Pg>();
-
+    // If we have a list of CIDs, join them with commas and wrap each in quotes.
     if let Some(cids) = &params.cid {
-        query = query.filter(cid.eq_any(cids));
+        let cids_list = cids
+            .iter()
+            .map(|cid| format!("'{}'", cid))
+            .collect::<Vec<String>>()
+            .join(", ");
+        query_str.push_str(&format!(" AND cid IN ({})", cids_list));
     }
 
+    // If a name filter is provided, add it to the query.
     if let Some(p_name) = &params.name {
-        query = query.filter(name.eq(p_name))
+        query_str.push_str(&format!(" AND name = '{}'", p_name));
     }
 
+    // If a 'before' timestamp is provided, filter by created_at less than that value.
     if let Some(before) = &params.before {
-        query = query.filter(created_at.lt(before))
+        query_str.push_str(&format!(" AND created_at < '{}'", before));
     }
 
+    // If an 'after' timestamp is provided, filter by created_at greater than that value.
     if let Some(after) = &params.after {
-        query = query.filter(created_at.gt(after))
+        query_str.push_str(&format!(" AND created_at > '{}'", after));
     }
 
+    // If a limit is provided, add a LIMIT clause.
     if let Some(limit) = &params.limit {
-        query = query.limit(limit.clone() as i64)
+        query_str.push_str(&format!(" LIMIT {}", limit));
     }
 
-    let results = query.load::<IpfsFile>(conn).await?; // Execute query
-
-    Ok(results)
+    // Execute the query using your database connection. Adjust the call as necessary for your async runtime.
+    query(&query_str).fetch_all(&conn).await
 }
 
-pub async fn find_pin<'a>(
-    conn: &mut PgConnection<'a>,
-    q_cid: String,
-) -> Result<Option<IpfsFile>, diesel::result::Error> {
-    use crate::db::repo::pins::files::dsl::*;
+pub async fn find_pin(conn: PSConnection, q_cid: String) -> Result<FileRecord, anyhow::Error> {
+    let query_str = format!(
+        "SELECT * FROM files WHERE cid = '{}' OR req_id = '{}' LIMIT 1",
+        q_cid, q_cid
+    );
 
-    match files
-        .filter(cid.eq(q_cid.clone()))
-        .or_filter(req_id.eq(q_cid))
-        .first::<IpfsFile>(conn)
-        .await
-    {
-        Ok(record) => Ok(Some(record)),
-        Err(diesel::result::Error::NotFound) => Ok(None),
-        Err(e) => Err(e),
-    }
+    query(&query_str).fetch_one(&conn).await
 }

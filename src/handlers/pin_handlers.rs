@@ -24,6 +24,7 @@ pub async fn get_pins(
 #[post("/pins")]
 pub async fn add_pin(service: Data<Arc<WipfsServices>>, pin: Json<Pin>) -> Result<HttpResponse> {
     let pin = pin.into_inner();
+    println!("Getting pinned");
     let result = service.pin_service.add_pin(pin).await?;
     Ok(HttpResponse::Accepted().json(result))
 }

@@ -1,15 +1,15 @@
-use diesel::{Insertable, Queryable};
+use chrono::{DateTime, Utc};
+use planetscale_driver::Database;
+use serde::{Deserialize, Serialize};
 
-// Diesel schema definition
-diesel::table! {
-    files (id) {
-        id -> BigInt,
-        created_at -> Timestamptz,
-        cid -> Varchar,
-        size -> BigInt,
-        bundle_tx_id -> Varchar,
-        envelope_id -> Varchar,
-        name -> Nullable<Varchar>,
-        req_id -> Varchar,
-    }
+#[derive(Serialize, Deserialize, Debug, Clone, Database)]
+pub struct FileRecord {
+    pub id: i64,
+    pub created_at: String,
+    pub cid: String,
+    pub size: i64,
+    pub bundle_tx_id: String,
+    pub envelope_id: String,
+    pub name: String,
+    pub req_id: String,
 }

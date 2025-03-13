@@ -1,6 +1,7 @@
+use crate::db::planetscale_driver::PlanetScaleDriver;
 use crate::db::repo::pins::{create_pin, find_pin, find_pins};
+use crate::db::DATE_FORMAT_MYSQL;
 use crate::internal_vars::IPFS_HOST;
-use crate::services::db_service::DbService;
 use crate::services::pin_service::{GetPinsParams, PinServiceTrait};
 use crate::services::storage_service::StorageService;
 use crate::services::wvm_bundler_service::WvmBundlerService;
@@ -8,15 +9,14 @@ use crate::structs::{Pin, PinMeta, PinResults, PinStatus, Status, StatusInfo};
 use actix_web::error::{ErrorInternalServerError, ErrorNotFound};
 use async_trait::async_trait;
 use bundler::utils::core::bundle::Bundle;
-use chrono::format::Fixed::TimezoneOffset;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct WvmPinService {
-    pub(crate) db_service: Arc<DbService>,
+    pub(crate) db_service: Arc<PlanetScaleDriver>,
     pub(crate) storage_service: Arc<StorageService>,
     pub(crate) wvm_bundler_service: Arc<WvmBundlerService>,
 }
@@ -47,11 +47,11 @@ impl WvmPinService {
 #[async_trait]
 impl PinServiceTrait for WvmPinService {
     async fn get_pins(&self, filters: &GetPinsParams) -> actix_web::Result<PinResults> {
-        let pool = self.db_service.db_pool.clone();
-        let mut conn = pool.get().await.unwrap();
-        let pins = find_pins(&mut conn, &filters)
+        let conn = self.db_service.get_conn();
+        let pins = find_pins(conn, &filters)
             .await
             .map_err(|e| ErrorInternalServerError(e))?;
+        println!("{:?}", pins);
         Ok(PinResults {
             count: pins.len() as i32,
             results: pins
@@ -59,10 +59,12 @@ impl PinServiceTrait for WvmPinService {
                 .map(|db_file| PinStatus {
                     request_id: db_file.req_id,
                     status: Status::Pinned,
-                    created: DateTime::from_utc(db_file.created_at, Utc),
+                    created: DateTime::parse_from_str(&db_file.created_at, DATE_FORMAT_MYSQL)
+                        .unwrap()
+                        .with_timezone(&Utc),
                     pin: Pin {
                         cid: db_file.cid,
-                        name: db_file.name,
+                        name: Some(db_file.name),
                         origins: None,
                         meta: None,
                     },
@@ -74,11 +76,11 @@ impl PinServiceTrait for WvmPinService {
     }
 
     async fn add_pin(&self, pin: Pin) -> actix_web::Result<PinStatus> {
-        let pool = self.db_service.db_pool.clone();
-        let mut conn = pool.get().await.unwrap();
+        let conn = self.db_service.get_conn();
         let req_id = Uuid::new_v4().to_string();
 
         if let Some(bytes) = self.fetch_ipfs_file(&pin.cid) {
+            println!("Bytes found");
             let metadata = pin.meta.clone().unwrap_or_else(|| PinMeta::default());
             let content_type = metadata
                 .0
@@ -106,7 +108,7 @@ impl PinServiceTrait for WvmPinService {
                             let envelope_hash = item_envelope.hash.clone();
 
                             let insert_pin_data = create_pin(
-                                &mut conn,
+                                conn,
                                 &pin.cid,
                                 len,
                                 &bundler_tx_id,
@@ -115,6 +117,12 @@ impl PinServiceTrait for WvmPinService {
                                 &req_id,
                             )
                             .await;
+
+                            println!("Inserted {}", insert_pin_data.is_ok());
+
+                            insert_pin_data.as_ref().err().map(|e| {
+                                println!("{:?}", e);
+                            });
 
                             if insert_pin_data.is_ok() {
                                 return Ok(PinStatus {
@@ -145,17 +153,18 @@ impl PinServiceTrait for WvmPinService {
     }
 
     async fn get_pin_by_request_id(&self, request_id: &str) -> actix_web::Result<PinStatus> {
-        let pool = self.db_service.db_pool.clone();
-        let mut conn = pool.get().await.unwrap();
-        let find = find_pin(&mut conn, request_id.to_string()).await;
-        if let Ok(Some(file)) = find {
+        let conn = self.db_service.get_conn();
+        let find = find_pin(conn, request_id.to_string()).await;
+        if let Ok(file) = find {
             Ok(PinStatus {
                 request_id: file.req_id,
                 status: Status::Pinned,
-                created: DateTime::from_utc(file.created_at, Utc),
+                created: DateTime::parse_from_str(&file.created_at, DATE_FORMAT_MYSQL)
+                    .unwrap()
+                    .with_timezone(&Utc),
                 pin: Pin {
                     cid: file.cid,
-                    name: file.name,
+                    name: Some(file.name),
                     origins: None,
                     meta: None,
                 },

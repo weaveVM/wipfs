@@ -8,8 +8,8 @@ mod structs;
 mod utils;
 
 use crate::actix_web_service::CustomShuttleActixWeb;
+use crate::db::planetscale_driver::PlanetScaleDriver;
 use crate::handlers::pin_handlers::configure_app;
-use crate::services::db_service::DbService;
 use crate::services::pin_service::PinServiceTrait;
 use crate::services::r#impl::wvm_pin::WvmPinService;
 use crate::services::storage_service;
@@ -26,7 +26,7 @@ async fn hello_world() -> &'static str {
 }
 
 async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsServices> {
-    let db_service: Arc<DbService> = Arc::new(DbService::new(secrets.get("PG_URL").unwrap()).await);
+    let db_driver = Arc::new(PlanetScaleDriver::from(&secrets));
 
     let storage_service = {
         let bucket_name = secrets.get("BUCKET_NAME").unwrap();
@@ -42,14 +42,14 @@ async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsService
     };
 
     let pin_service: Arc<dyn PinServiceTrait> = Arc::new(WvmPinService {
-        db_service: db_service.clone(),
+        db_service: db_driver.clone(),
         storage_service: storage_service.clone(),
         wvm_bundler_service: bundler_service.clone(),
     });
 
     Arc::new(WipfsServices::new(
         pin_service,
-        db_service,
+        db_driver,
         storage_service,
         bundler_service,
     ))
