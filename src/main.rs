@@ -9,7 +9,9 @@ mod utils;
 
 use crate::actix_web_service::CustomShuttleActixWeb;
 use crate::db::planetscale_driver::PlanetScaleDriver;
+use crate::handlers::internal::internal_auth::configure_internal_endpoints;
 use crate::handlers::pin_handlers::configure_app;
+use crate::services::auth_service::AuthService;
 use crate::services::pin_service::PinServiceTrait;
 use crate::services::r#impl::wvm_pin::WvmPinService;
 use crate::services::storage_service;
@@ -47,11 +49,17 @@ async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsService
         wvm_bundler_service: bundler_service.clone(),
     });
 
+    let auth_service = Arc::new(AuthService {
+        db_service: db_driver.clone(),
+    });
+
     Arc::new(WipfsServices::new(
         pin_service,
         db_driver,
         storage_service,
         bundler_service,
+        auth_service,
+        secrets,
     ))
 }
 
@@ -64,6 +72,7 @@ async fn main(
         cfg.app_data(Data::new(service_box));
         cfg.service(hello_world);
         configure_app(cfg);
+        configure_internal_endpoints(cfg);
     };
 
     Ok(config.into())
