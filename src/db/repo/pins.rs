@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct NewFile<'a> {
     pub cid: &'a str,
+    pub created_by: i64,
     pub size: i64,
     pub bundle_tx_id: &'a str,
     pub envelope_id: &'a str,
@@ -18,6 +19,7 @@ pub struct NewFile<'a> {
 
 pub async fn create_pin(
     conn: PSConnection,
+    created_by: i64,
     cid: &str,
     size: usize,
     bundle_tx_id: &str,
@@ -29,8 +31,8 @@ pub async fn create_pin(
     let formatted_created_at = now.format(DATE_FORMAT_MYSQL).to_string();
 
     let query_str = format!(
-        "INSERT INTO files(cid, size, bundle_tx_id, envelope_id, name, req_id) VALUES('{}', {}, '{}', '{}', '{}', '{}')",
-        cid, size as i64, bundle_tx_id, envelope_id, name.unwrap_or_default(), req_id
+        "INSERT INTO files(created_by, cid, size, bundle_tx_id, envelope_id, name, req_id) VALUES('{}', '{}', {}, '{}', '{}', '{}', '{}')",
+        created_by, cid, size as i64, bundle_tx_id, envelope_id, name.unwrap_or_default(), req_id
     );
 
     query(&query_str).execute(&conn).await

@@ -45,6 +45,12 @@ pub struct Pin {
     pub meta: Option<PinMeta>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreatePin {
+    pub pin: Pin,
+    pub created_by: i64,
+}
+
 /// Status a pin object can have at a pinning service
 #[derive(Debug, Serialize, Deserialize, EnumAsInner)]
 #[serde(rename_all = "lowercase")]

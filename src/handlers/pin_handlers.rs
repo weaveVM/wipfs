@@ -1,12 +1,14 @@
+use crate::handlers::{extract_req_user, CurrentUser};
 use crate::services::pin_service::{GetPinsParams, PinServiceTrait};
 use crate::services::wipfs_services::WipfsServices;
-use crate::structs::{Pin, PinResults, PinStatus};
+use crate::structs::{CreatePin, Pin, PinResults, PinStatus};
 use crate::utils::parse_query_string;
+use actix_web::error::ErrorUnauthorized;
 use actix_web::web::{Path, ServiceConfig};
 use actix_web::{
     delete, get, post,
     web::{Data, Json, Query},
-    HttpRequest, HttpResponse, Result,
+    Error, HttpMessage, HttpRequest, HttpResponse, Result,
 };
 use std::sync::Arc;
 // Handler functions
@@ -22,10 +24,21 @@ pub async fn get_pins(
 }
 
 #[post("/pins")]
-pub async fn add_pin(service: Data<Arc<WipfsServices>>, pin: Json<Pin>) -> Result<HttpResponse> {
+pub async fn add_pin(
+    req: HttpRequest,
+    service: Data<Arc<WipfsServices>>,
+    pin: Json<Pin>,
+) -> Result<HttpResponse> {
     let pin = pin.into_inner();
-    println!("Getting pinned");
-    let result = service.pin_service.add_pin(pin).await?;
+
+    let auth = extract_req_user(req)?;
+
+    let create_pin = CreatePin {
+        pin,
+        created_by: auth.0.owner_id,
+    };
+
+    let result = service.pin_service.add_pin(create_pin).await?;
     Ok(HttpResponse::Accepted().json(result))
 }
 

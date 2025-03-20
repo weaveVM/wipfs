@@ -1,11 +1,13 @@
+use crate::handlers::CurrentUser;
 use crate::internal_vars::AUTH_HEADER;
 use crate::services::wipfs_services::WipfsServices;
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
+use actix_web::http::header::CacheDirective::Extension;
 use actix_web::middleware::Next;
 use actix_web::web::Data;
-use actix_web::Error;
+use actix_web::{Error, HttpMessage};
 use std::sync::Arc;
 
 pub async fn auth_middleware(
@@ -15,6 +17,11 @@ pub async fn auth_middleware(
     let service = req.app_data::<Data<Arc<WipfsServices>>>().unwrap();
     if req.path().starts_with("/internal") {
         check_internal_auth(&req, &service)?;
+    } else if req.path().starts_with("/pins") {
+        let is_valid_key = check_user_auth(&req, &service).await.unwrap_or(false);
+        if !is_valid_key {
+            return Err(ErrorUnauthorized("API key is invalid".to_string()));
+        }
     }
 
     println!("Accepted {} {:?}", req.path(), req.method());
@@ -25,6 +32,29 @@ pub async fn auth_middleware(
 
     // Post-processing
     Ok(res)
+}
+
+async fn check_user_auth(
+    req: &ServiceRequest,
+    service: &Data<Arc<WipfsServices>>,
+) -> Result<bool, Error> {
+    let token = req
+        .headers()
+        .get("authorization")
+        .and_then(|header| header.to_str().ok())
+        .ok_or_else(|| ErrorUnauthorized("API Key is incorrect".to_string()))?;
+
+    // We don't need bearer tokens here.
+    let token = token.replace("Bearer ", "");
+
+    let access_key = service.auth_service.verify_access(token).await;
+
+    if let Some(access_key) = access_key {
+        req.extensions_mut().insert(CurrentUser(access_key));
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }
 
 fn check_internal_auth(

@@ -5,7 +5,7 @@ use crate::internal_vars::IPFS_HOST;
 use crate::services::pin_service::{GetPinsParams, PinServiceTrait};
 use crate::services::storage_service::StorageService;
 use crate::services::wvm_bundler_service::WvmBundlerService;
-use crate::structs::{Pin, PinMeta, PinResults, PinStatus, Status, StatusInfo};
+use crate::structs::{CreatePin, Pin, PinMeta, PinResults, PinStatus, Status, StatusInfo};
 use actix_web::error::{ErrorInternalServerError, ErrorNotFound};
 use async_trait::async_trait;
 use bundler::utils::core::bundle::Bundle;
@@ -75,7 +75,9 @@ impl PinServiceTrait for WvmPinService {
         })
     }
 
-    async fn add_pin(&self, pin: Pin) -> actix_web::Result<PinStatus> {
+    async fn add_pin(&self, data: CreatePin) -> actix_web::Result<PinStatus> {
+        let CreatePin { created_by, pin } = data;
+
         let conn = self.db_service.get_conn();
         let req_id = Uuid::new_v4().to_string();
 
@@ -109,6 +111,7 @@ impl PinServiceTrait for WvmPinService {
 
                             let insert_pin_data = create_pin(
                                 conn,
+                                created_by,
                                 &pin.cid,
                                 len,
                                 &bundler_tx_id,

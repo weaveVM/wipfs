@@ -13,3 +13,12 @@ pub struct FileRecord {
     pub name: String,
     pub req_id: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, Database)]
+pub struct AccessKey {
+    pub id: i64,
+    pub owner_id: i64,
+    pub access_key: String,
+    pub created_at: String,
+    pub is_active: bool,
+}
