@@ -1,4 +1,4 @@
-use crate::db::schema::{AccessKey, FileRecord};
+use crate::db::schema::{AccessKey, Account, FileRecord};
 use crate::db::DATE_FORMAT_MYSQL;
 use chrono::{DateTime, Utc};
 use planetscale_driver::{query, PSConnection};
@@ -26,6 +26,18 @@ pub async fn create_account(conn: PSConnection, data: NewAccount) -> anyhow::Res
     query(&query_str).execute(&conn).await
 }
 
+pub async fn find_account(
+    conn: PSConnection,
+    access_key: String,
+) -> Result<Account, anyhow::Error> {
+    let query_str = format!(
+        "SELECT * FROM accounts WHERE account_name = '{}' LIMIT 1",
+        access_key
+    );
+
+    query(&query_str).fetch_one(&conn).await
+}
+
 pub async fn create_access_key(conn: PSConnection, data: NewAccessKeys) -> anyhow::Result<()> {
     let query_str = format!(
         "INSERT INTO access_keys(owner_id, access_key, is_active) VALUES('{}', 'load_acc_{}', {})",
@@ -45,4 +57,13 @@ pub async fn find_access_key(
     );
 
     query(&query_str).fetch_one(&conn).await
+}
+
+pub async fn find_access_keys(
+    conn: PSConnection,
+    owner_id: i64,
+) -> Result<Vec<AccessKey>, anyhow::Error> {
+    let query_str = format!("SELECT * FROM access_keys WHERE owner_id = {}", owner_id);
+
+    query(&query_str).fetch_all(&conn).await
 }

@@ -22,3 +22,12 @@ pub struct AccessKey {
     pub created_at: String,
     pub is_active: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, Database)]
+pub struct Account {
+    pub id: i64,
+    pub account_name: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub is_active: bool,
+}
