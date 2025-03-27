@@ -19,8 +19,8 @@ use crate::services::storage_service::StorageService;
 use crate::services::wipfs_services::WipfsServices;
 use crate::services::wvm_bundler_service::WvmBundlerService;
 use actix_web::web::Data;
+use actix_web::http::header;
 use actix_web::{get, web::ServiceConfig};
-use actix_cors::Cors;
 use std::sync::Arc;
 
 #[get("/")]
@@ -70,14 +70,16 @@ async fn main(
 ) -> CustomShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let service_box = get_services(secrets).await;
     let config = move |cfg: &mut ServiceConfig| {
+        
+    cfg.app_data(
+        actix_web::web::Data::new(
+            actix_web::middleware::DefaultHeaders::new()
+                .add((header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+                .add((header::ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, PUT, DELETE, OPTIONS"))
+                .add((header::ACCESS_CONTROL_ALLOW_HEADERS, "Content-Type, Authorization"))
+            )
+        );
 
-        let cors = Cors::default()
-        .allow_any_origin()
-        .allow_any_header()
-        .allow_any_method()
-        .max_age(3600);
-
-        cfg.service(actix_web::web::scope("*").wrap(cors));
         cfg.app_data(Data::new(service_box));
         cfg.service(hello_world);
         configure_app(cfg);
