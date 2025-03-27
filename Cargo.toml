@@ -21,3 +21,4 @@ enum-as-inner = "0.6.1"
 shuttle-diesel-async = { git = "https://github.com/aumetra/shuttle-diesel-async", version = "0.1.0", features = ["bb8", "deadpool"] }
 planetscale-driver = "0.5.1"
 anyhow = "1.0.97"
+actix-cors = "0.7.1"
