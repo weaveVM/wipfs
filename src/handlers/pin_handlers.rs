@@ -18,7 +18,13 @@ pub async fn get_pins(
     service: Data<Arc<WipfsServices>>,
     req: HttpRequest,
 ) -> Result<Json<PinResults>> {
-    let params = parse_query_string(req.query_string());
+    let auth = extract_req_user(&req)?;
+
+    let mut params = parse_query_string(req.query_string());
+
+    // params
+    params.created_by = Some(auth.0.owner_id);
+
     let result = service.pin_service.get_pins(&params).await?;
     Ok(Json(result))
 }
@@ -31,7 +37,7 @@ pub async fn add_pin(
 ) -> Result<HttpResponse> {
     let pin = pin.into_inner();
 
-    let auth = extract_req_user(req)?;
+    let auth = extract_req_user(&req)?;
 
     let create_pin = CreatePin {
         pin,

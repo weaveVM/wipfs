@@ -8,7 +8,7 @@ pub mod pin_handlers;
 #[derive(Clone)]
 pub struct CurrentUser(pub AccessKey);
 
-fn extract_req_user(req: HttpRequest) -> actix_web::Result<CurrentUser, Error> {
+fn extract_req_user(req: &HttpRequest) -> actix_web::Result<CurrentUser, Error> {
     let extensions = req.extensions();
 
     let auth = extensions

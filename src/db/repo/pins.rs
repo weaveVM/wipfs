@@ -55,6 +55,10 @@ pub async fn find_pins(
         query_str.push_str(&format!(" AND cid IN ({})", cids_list));
     }
 
+    if let Some(created_by) = &params.created_by {
+        query_str.push_str(&format!(" AND created_by = {}", created_by));
+    }
+
     // If a name filter is provided, add it to the query.
     if let Some(p_name) = &params.name {
         query_str.push_str(&format!(" AND name = '{}'", p_name));

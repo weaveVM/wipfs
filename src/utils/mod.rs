@@ -29,6 +29,7 @@ pub fn parse_query_string(query: &str) -> GetPinsParams {
         limit: params
             .remove("limit")
             .and_then(|mut v| v.pop()?.parse().ok()),
-        meta: None, // Parsing `meta` depends on how `PinMeta` is structured
+        meta: None, // Parsing `meta` depends on how `PinMeta` is structured,
+        created_by: None,
     }
 }

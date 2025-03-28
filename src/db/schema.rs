@@ -12,6 +12,7 @@ pub struct FileRecord {
     pub envelope_id: String,
     pub name: String,
     pub req_id: String,
+    pub created_by: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Database)]

@@ -17,6 +17,7 @@ pub struct GetPinsParams {
     pub limit: Option<i32>,
     #[serde(flatten)]
     pub meta: Option<PinMeta>,
+    pub created_by: Option<i64>,
 }
 
 #[async_trait]

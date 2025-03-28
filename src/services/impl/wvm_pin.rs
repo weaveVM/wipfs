@@ -51,25 +51,30 @@ impl PinServiceTrait for WvmPinService {
         let pins = find_pins(conn, &filters)
             .await
             .map_err(|e| ErrorInternalServerError(e))?;
-        println!("{:?}", pins);
+
         Ok(PinResults {
             count: pins.len() as i32,
             results: pins
                 .into_iter()
-                .map(|db_file| PinStatus {
-                    request_id: db_file.req_id,
-                    status: Status::Pinned,
-                    created: DateTime::parse_from_str(&db_file.created_at, DATE_FORMAT_MYSQL)
-                        .unwrap()
-                        .with_timezone(&Utc),
-                    pin: Pin {
-                        cid: db_file.cid,
-                        name: Some(db_file.name),
-                        origins: None,
-                        meta: None,
-                    },
-                    delegates: vec![],
-                    info: None,
+                .map(|db_file| {
+                    let naive =
+                        NaiveDateTime::parse_from_str(&db_file.created_at, DATE_FORMAT_MYSQL)
+                            .unwrap();
+
+                    println!("{}", db_file.created_at);
+                    PinStatus {
+                        request_id: db_file.req_id,
+                        status: Status::Pinned,
+                        created: DateTime::<Utc>::from_utc(naive, Utc),
+                        pin: Pin {
+                            cid: db_file.cid,
+                            name: Some(db_file.name),
+                            origins: None,
+                            meta: None,
+                        },
+                        delegates: vec![],
+                        info: None,
+                    }
                 })
                 .collect(),
         })
