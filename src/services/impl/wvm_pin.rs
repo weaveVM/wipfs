@@ -61,6 +61,11 @@ impl PinServiceTrait for WvmPinService {
                         NaiveDateTime::parse_from_str(&db_file.created_at, DATE_FORMAT_MYSQL)
                             .unwrap();
 
+                    let meta = HashMap::from([
+                        ("envelope-id".to_string(), db_file.envelope_id.clone()),
+                        ("bundle-id".to_string(), db_file.bundle_tx_id.clone()),
+                    ]);
+
                     println!("{}", db_file.created_at);
                     PinStatus {
                         request_id: db_file.req_id,
@@ -70,7 +75,7 @@ impl PinServiceTrait for WvmPinService {
                             cid: db_file.cid,
                             name: Some(db_file.name),
                             origins: None,
-                            meta: None,
+                            meta: Some(PinMeta(meta)),
                         },
                         delegates: vec![],
                         info: None,
