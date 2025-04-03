@@ -64,6 +64,7 @@ impl PinServiceTrait for WvmPinService {
                     let meta = HashMap::from([
                         ("envelope-id".to_string(), db_file.envelope_id.clone()),
                         ("bundle-id".to_string(), db_file.bundle_tx_id.clone()),
+                        ("size".to_string(), db_file.size.to_string()),
                     ]);
 
                     println!("{}", db_file.created_at);
