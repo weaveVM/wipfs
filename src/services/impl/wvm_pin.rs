@@ -114,41 +114,33 @@ impl PinServiceTrait for WvmPinService {
                     .await;
 
                 if let Ok(bundler_tx_id) = send {
-                    let retrieve_bundle = Bundle::retrieve_envelopes(bundler_tx_id.clone()).await;
+                    let insert_pin_data = create_pin(
+                        conn,
+                        created_by,
+                        &pin.cid,
+                        len,
+                        &bundler_tx_id,
+                        &bundler_tx_id,
+                        pin.name.clone(),
+                        &req_id,
+                    )
+                    .await;
 
-                    if let Ok(envelopes) = retrieve_bundle {
-                        if let Some(item_envelope) = envelopes.envelopes.get(0) {
-                            let envelope_hash = item_envelope.hash.clone();
+                    println!("Inserted {}", insert_pin_data.is_ok());
 
-                            let insert_pin_data = create_pin(
-                                conn,
-                                created_by,
-                                &pin.cid,
-                                len,
-                                &bundler_tx_id,
-                                &envelope_hash,
-                                pin.name.clone(),
-                                &req_id,
-                            )
-                            .await;
+                    insert_pin_data.as_ref().err().map(|e| {
+                        println!("{:?}", e);
+                    });
 
-                            println!("Inserted {}", insert_pin_data.is_ok());
-
-                            insert_pin_data.as_ref().err().map(|e| {
-                                println!("{:?}", e);
-                            });
-
-                            if insert_pin_data.is_ok() {
-                                return Ok(PinStatus {
-                                    request_id: req_id,
-                                    status: Status::Pinned,
-                                    created: Default::default(),
-                                    pin,
-                                    delegates: vec![],
-                                    info: Some(self.get_new_status_info(bundler_tx_id)),
-                                });
-                            }
-                        }
+                    if insert_pin_data.is_ok() {
+                        return Ok(PinStatus {
+                            request_id: req_id,
+                            status: Status::Pinned,
+                            created: Default::default(),
+                            pin,
+                            delegates: vec![],
+                            info: Some(self.get_new_status_info(bundler_tx_id)),
+                        });
                     }
                 }
             }
