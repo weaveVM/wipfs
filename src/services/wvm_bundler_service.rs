@@ -2,6 +2,7 @@ use bundler::utils::core::bundle::Bundle;
 use bundler::utils::core::envelope::Envelope;
 use bundler::utils::core::tags::Tag;
 use bundler::utils::errors::Error;
+use serde_json::Value;
 
 pub struct WvmBundlerService {
     private_key: String,
@@ -14,40 +15,29 @@ impl WvmBundlerService {
 
     pub async fn send(
         &self,
-        cid: String,
-        name: Option<String>,
         content_type: String,
         data: Vec<u8>,
     ) -> Result<String, Error> {
-        let mut tags = vec![
-            Tag {
-                name: "Protocol".to_string(),
-                value: "ipfs.rs".to_string(),
+        // Send to load0 via HTTP
+        let response = ureq::post("https://load0.network/upload")
+            .content_type(&content_type)
+            .send(&data[..])
+            .map_err(|e| Error::Other(format!("HTTP request failed: {}", e)))?;
+    
+        let body = response.into_body().read_to_string()
+            .map_err(|e| Error::Other(format!("Failed to read response: {}", e)))?;
+        
+        let json_result = serde_json::from_str::<Value>(&body);
+        
+        match json_result {
+            Ok(json) => {
+                json.get("optimistic_hash")
+                    .and_then(|h| h.as_str())
+                    .map(|hash| hash.to_string())
+                    .or(Some(body))
+                    .ok_or_else(|| Error::Other("Unexpected empty response".to_string()))
             },
-            Tag {
-                name: "CID".to_string(),
-                value: cid,
-            },
-            Tag {
-                name: "Content-Type".to_string(),
-                value: content_type,
-            },
-        ];
-
-        if let Some(pin_name) = name {
-            tags.push(Tag {
-                name: "Pin-Name".to_string(),
-                value: pin_name,
-            });
+            Err(_) => Ok(body),
         }
-
-        let envelope = Envelope::new().data(Some(data)).tags(Some(tags));
-
-        let bundle = Bundle::new()
-            .private_key(self.private_key.clone())
-            .envelopes(vec![envelope])
-            .build()?;
-
-        bundle.propagate().await
     }
 }
