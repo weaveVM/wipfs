@@ -110,7 +110,7 @@ impl PinServiceTrait for WvmPinService {
                 let len = bytes.len();
                 let send = self
                     .wvm_bundler_service
-                    .send(pin.cid.clone(), pin.name.clone(), content_type, bytes)
+                    .send(content_type, bytes)
                     .await;
 
                 if let Ok(bundler_tx_id) = send {
