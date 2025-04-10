@@ -33,6 +33,23 @@ pub async fn get_keys(
     Ok(HttpResponse::Ok().json(add_acct))
 }
 
+#[get("/internal/verify/{access_key}")]
+pub async fn verify_access_key(
+    service: Data<Arc<WipfsServices>>,
+    access_key: Path<String>,
+) -> actix_web::Result<HttpResponse> {
+    let access_key = service
+        .auth_service
+        .verify_access(access_key.into_inner())
+        .await;
+
+    if access_key.is_some() {
+        Ok(HttpResponse::Ok().finish())
+    } else {
+        Ok(HttpResponse::Unauthorized().finish())
+    }
+}
+
 #[post("/internal/account")]
 pub async fn create_account(
     service: Data<Arc<WipfsServices>>,
