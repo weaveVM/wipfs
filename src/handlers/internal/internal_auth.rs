@@ -82,5 +82,6 @@ pub fn configure_internal_endpoints(cfg: &mut ServiceConfig) {
     cfg.service(get_keys)
         .service(get_account)
         .service(create_account)
-        .service(create_access_key);
+        .service(create_access_key)
+        .service(verify_access_key);
 }
