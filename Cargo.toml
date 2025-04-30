@@ -13,7 +13,7 @@ serde = { version = "1.0.217", features = ["derive"] }
 async-trait = "0.1.85"
 num_cpus = "1.16.0"
 cloud-storage = "0.11.1"
-ureq = "3.0.3"
+ureq = { version = "3.0.3", features = ["json"] }
 bundler = { git = "https://github.com/weaveVM/bundler", branch = "main" }
 uuid = "1.12.1"
 form_urlencoded = "1.2.1"

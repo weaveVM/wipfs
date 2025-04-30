@@ -89,6 +89,8 @@ impl PinServiceTrait for WvmPinService {
     async fn add_pin(&self, data: CreatePin) -> actix_web::Result<PinStatus> {
         let CreatePin { created_by, pin } = data;
 
+        println!("{:?}", pin);
+
         let conn = self.db_service.get_conn();
         let req_id = Uuid::new_v4().to_string();
 
@@ -108,12 +110,10 @@ impl PinServiceTrait for WvmPinService {
 
             if upload_to_bucket.is_ok() {
                 let len = bytes.len();
-                let send = self
-                    .wvm_bundler_service
-                    .send(content_type, bytes)
-                    .await;
+                let send = self.wvm_bundler_service.send(content_type, bytes).await;
 
                 if let Ok(bundler_tx_id) = send {
+                    println!("{}", bundler_tx_id);
                     let insert_pin_data = create_pin(
                         conn,
                         created_by,

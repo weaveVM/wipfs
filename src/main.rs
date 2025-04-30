@@ -9,7 +9,6 @@ mod utils;
 
 use crate::actix_web_service::CustomShuttleActixWeb;
 use crate::db::planetscale_driver::PlanetScaleDriver;
-use crate::handlers::internal::internal_auth::configure_internal_endpoints;
 use crate::handlers::pin_handlers::configure_app;
 use crate::services::auth_service::AuthService;
 use crate::services::pin_service::PinServiceTrait;
@@ -86,7 +85,6 @@ async fn main(
         cfg.app_data(Data::new(service_box));
         cfg.service(hello_world);
         configure_app(cfg);
-        configure_internal_endpoints(cfg);
     };
 
     Ok(config.into())

@@ -15,7 +15,7 @@ pub struct FileRecord {
     pub created_by: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Database)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AccessKey {
     pub id: i64,
     pub owner_id: i64,
@@ -24,11 +24,24 @@ pub struct AccessKey {
     pub is_active: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Database)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
     pub id: i64,
     pub account_name: String,
     pub created_at: String,
     pub updated_at: String,
+    pub is_active: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NewAccount {
+    pub account_name: String,
+    pub is_active: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct NewAccessKeys {
+    pub owner_id: i64,
+    pub access_key: String,
     pub is_active: bool,
 }
