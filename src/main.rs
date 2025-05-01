@@ -9,7 +9,6 @@ mod utils;
 
 use crate::actix_web_service::CustomShuttleActixWeb;
 use crate::db::planetscale_driver::PlanetScaleDriver;
-use crate::handlers::internal::internal_auth::configure_internal_endpoints;
 use crate::handlers::pin_handlers::configure_app;
 use crate::services::auth_service::AuthService;
 use crate::services::pin_service::PinServiceTrait;
@@ -64,11 +63,22 @@ async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsService
     ))
 }
 
+fn configure_env_vars(secrets: &shuttle_runtime::SecretStore) {
+    unsafe {
+        std::env::set_var(
+            "API_INTERNAL_KEY",
+            secrets.get("API_INTERNAL_KEY").unwrap_or("".to_string()),
+        );
+    }
+}
+
 #[shuttle_runtime::main]
 async fn main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> CustomShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
-    let service_box = get_services(secrets).await;
+    configure_env_vars(&secrets);
+
+    let service_box = get_services(secrets.clone()).await;
     let config = move |cfg: &mut ServiceConfig| {
         cfg.app_data(actix_web::web::Data::new(
             actix_web::middleware::DefaultHeaders::new()
@@ -86,7 +96,6 @@ async fn main(
         cfg.app_data(Data::new(service_box));
         cfg.service(hello_world);
         configure_app(cfg);
-        configure_internal_endpoints(cfg);
     };
 
     Ok(config.into())

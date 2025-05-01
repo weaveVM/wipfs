@@ -1,3 +1,5 @@
+pub mod http;
+
 use crate::services::pin_service::GetPinsParams;
 use std::collections::HashMap;
 
