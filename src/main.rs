@@ -63,11 +63,22 @@ async fn get_services(secrets: shuttle_runtime::SecretStore) -> Arc<WipfsService
     ))
 }
 
+fn configure_env_vars(secrets: &shuttle_runtime::SecretStore) {
+    unsafe {
+        std::env::set_var(
+            "API_INTERNAL_KEY",
+            secrets.get("API_INTERNAL_KEY").unwrap_or("".to_string()),
+        );
+    }
+}
+
 #[shuttle_runtime::main]
 async fn main(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
 ) -> CustomShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
-    let service_box = get_services(secrets).await;
+    configure_env_vars(&secrets);
+
+    let service_box = get_services(secrets.clone()).await;
     let config = move |cfg: &mut ServiceConfig| {
         cfg.app_data(actix_web::web::Data::new(
             actix_web::middleware::DefaultHeaders::new()
