@@ -1,22 +1,31 @@
 use crate::handlers::CurrentUser;
 use crate::internal_vars::AUTH_HEADER;
 use crate::services::wipfs_services::WipfsServices;
+use crate::utils::http::get_internal_call;
+use crate::internal_vars::AUTH_HOST;
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::error::ErrorUnauthorized;
-use actix_web::http::header::CacheDirective::Extension;
 use actix_web::middleware::Next;
 use actix_web::web::Data;
-use actix_web::{Error, HttpMessage};
+use actix_web::{Error, HttpMessage, HttpResponse};
 use std::sync::Arc;
 
 pub async fn auth_middleware(
     req: ServiceRequest,
-    next: Next<impl MessageBody>,
+    next: Next<impl MessageBody + 'static>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     let service = req.app_data::<Data<Arc<WipfsServices>>>().unwrap();
     if req.path().starts_with("/internal") {
         check_internal_auth(&req, &service)?;
+        let url = format!("{}{}", *AUTH_HOST, req.path()); 
+        let response = get_internal_call::<serde_json::Value>(url).unwrap(); 
+        let http_resp = HttpResponse::Ok().json(response);
+        return Ok(ServiceResponse::new(
+            req.into_parts().0,
+            http_resp.map_into_boxed_body()
+        ));
+
     } else if req.path().starts_with("/pins") {
         let is_valid_key = check_user_auth(&req, &service).await.unwrap_or(false);
         if !is_valid_key {
@@ -24,14 +33,9 @@ pub async fn auth_middleware(
         }
     }
 
-    println!("Accepted {} {:?}", req.path(), req.method());
-    // Pre-processing
-
-    // Call the next service in the middleware chain.
+    println!("Accepted {} {:?} {}", req.path(), req.method(), req.connection_info().host());
     let res = next.call(req).await?;
-
-    // Post-processing
-    Ok(res)
+    return Ok(res.map_into_boxed_body());
 }
 
 async fn check_user_auth(
