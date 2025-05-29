@@ -49,6 +49,7 @@ pub struct Pin {
 pub struct CreatePin {
     pub pin: Pin,
     pub created_by: i64,
+    pub user_token: String,
 }
 
 /// Status a pin object can have at a pinning service

@@ -1,3 +1,7 @@
+use crate::utils::s3::create_new_s3_client;
+use aws_sdk_s3::config::http::HttpResponse;
+use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
+use aws_sdk_s3::primitives::ByteStream;
 use bundler::utils::core::bundle::Bundle;
 use bundler::utils::core::envelope::Envelope;
 use bundler::utils::core::tags::Tag;
@@ -13,28 +17,31 @@ impl WvmBundlerService {
         Self { private_key }
     }
 
-    pub async fn send(&self, content_type: String, data: Vec<u8>) -> Result<String, Error> {
-        // Send to load0 via HTTP
-        let response = ureq::post("https://load0.network/upload")
-            .content_type(&content_type)
-            .send(&data[..])
-            .map_err(|e| Error::Other(format!("HTTP request failed: {}", e)))?;
+    pub async fn send(
+        &self,
+        content_type: String,
+        data: Vec<u8>,
+        user_token: String,
+        cid: String,
+    ) -> Result<String, Error> {
+        let user_aws_client = create_new_s3_client(user_token);
 
-        let body = response
-            .into_body()
-            .read_to_string()
-            .map_err(|e| Error::Other(format!("Failed to read response: {}", e)))?;
+        let save_file = user_aws_client
+            .put_object()
+            .content_type(content_type)
+            .body(ByteStream::from(data))
+            .bucket("ipfs")
+            .metadata("Create-Bucket-If-Not-Exists", "true")
+            .key(cid)
+            .send()
+            .await;
 
-        let json_result = serde_json::from_str::<Value>(&body);
-
-        match json_result {
-            Ok(json) => json
-                .get("optimistic_hash")
-                .and_then(|h| h.as_str())
-                .map(|hash| hash.to_string())
-                .or(Some(body))
-                .ok_or_else(|| Error::Other("Unexpected empty response".to_string())),
-            Err(_) => Ok(body),
+        match save_file {
+            Ok(output) => Ok(output.e_tag.unwrap()),
+            Err(e) => {
+                eprintln!("{:?}", e.into_service_error());
+                Err(Error::Other("File could not be sent".to_string()))
+            }
         }
     }
 }
