@@ -14,7 +14,7 @@ pub fn create_new_s3_client(access_key_id: String) -> Client {
                 .secret_access_key("")
                 .build(),
         )
-        .region(Some(Region::new("us-east-1")))
+        .region(Some(Region::new("eu-west-2")))
         .force_path_style(true)
         .build();
 
