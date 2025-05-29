@@ -42,6 +42,7 @@ pub async fn add_pin(
     let create_pin = CreatePin {
         pin,
         created_by: auth.0.owner_id,
+        user_token: auth.0.access_key.clone(),
     };
 
     let result = service.pin_service.add_pin(create_pin).await?;

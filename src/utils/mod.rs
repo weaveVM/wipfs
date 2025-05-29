@@ -1,4 +1,5 @@
 pub mod http;
+pub mod s3;
 
 use crate::services::pin_service::GetPinsParams;
 use std::collections::HashMap;
