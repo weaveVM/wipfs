@@ -23,6 +23,7 @@ impl WvmBundlerService {
         data: Vec<u8>,
         user_token: String,
         cid: String,
+        created_by: i64
     ) -> Result<String, Error> {
         let user_aws_client = create_new_s3_client(user_token);
 
@@ -30,7 +31,7 @@ impl WvmBundlerService {
             .put_object()
             .content_type(content_type)
             .body(ByteStream::from(data))
-            .bucket("ipfs")
+            .bucket(format!("ipfs-{}", created_by))
             .metadata("Create-Bucket-If-Not-Exists", "true")
             .key(cid)
             .send()

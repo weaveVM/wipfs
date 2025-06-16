@@ -107,6 +107,7 @@ impl PinServiceTrait for WvmPinService {
                 .map(|e| e.clone())
                 .unwrap_or("application/octet-stream".to_string());
 
+            // RE-EVALUATE?
             let upload_to_bucket = self
                 .storage_service
                 .upload(bytes.clone(), &pin.cid, &content_type)
@@ -114,9 +115,16 @@ impl PinServiceTrait for WvmPinService {
 
             if upload_to_bucket.is_ok() {
                 let len = bytes.len();
+
+                let file_name = metadata
+                    .0
+                    .get("X-Load-File-Name")
+                    .map(|e| e.clone())
+                    .unwrap_or(pin.cid.clone());
+
                 let send = self
                     .wvm_bundler_service
-                    .send(content_type, bytes, user_token, pin.cid.clone())
+                    .send(content_type, bytes, user_token, file_name, created_by)
                     .await;
 
                 println!("Bundler service {:?}", send);
